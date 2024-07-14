@@ -83,15 +83,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function newExtractLocation(urlLike: string) {
         let url = urlLike
+        if (url.startsWith('async ')) {
+            url = url.slice(6)
+        }
         if (url.startsWith('http:') || url.startsWith('https:')) {
             const urlObj = new URL(url)
             url = urlObj.pathname
         }
         if (url.startsWith('/@fs/')) {
             const isWindows = /^\/@fs\/[a-zA-Z]:\//.test(url)
-            url = urlLike.slice(isWindows ? 5 : 4)
+            url = url.slice(isWindows ? 5 : 4)
         }
-
         return url
     }
 
@@ -150,15 +152,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const start = performance.now()
                 const matches2 = /(at\s+)?(async\s+)?([^\s@]+)?(?:@|\s+\()?([^\s()]+):(\d+):(\d+)\)?/.exec(line)
                 if (matches2) {
-                    const url = newExtractLocation(matches2[4])
-                    if (url) {
-                        result.new = {
-                            time: performance.now() - start,
-                            file: url,
-                            method: matches2[3] || '',
-                            line: Number.parseInt(matches2[5]),
-                            column: Number.parseInt(matches2[6]),
-                        }
+                    result.new = {
+                        time: performance.now() - start,
+                        file: newExtractLocation(matches2[4]),
+                        method: matches2[3] || '',
+                        line: Number.parseInt(matches2[5]),
+                        column: Number.parseInt(matches2[6]),
                     }
                 }
             }
