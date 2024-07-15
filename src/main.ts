@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function parse(mode: ParserMode) {
         const stackTrace = source.value
-        return stackTrace.split('\n').reduce((acc, line) => {
+        return stackTrace.split('\n').map(l => l.trim()).reduce((acc, line) => {
             if (!line.includes('@') && !line.includes(':')) {
                 return acc
             }
@@ -150,20 +150,34 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (mode !== 'old') {
                 const start = performance.now()
-                const matches2 = /(at\s+)?(async\s+)?([^\s@]+)?(?:@|\s+\()?([^\s()]+):(\d+):(\d+)\)?/.exec(line)
+                const matches2 = /^(\bat\s*\b)?(?:\b\s*async\s*\b)?(\b\w+(?!([/:@]|(https?)|(file)))\b)?(?:@|\s+\()?([^\s()]+):(\d+):(\d+)\)?$/.exec(line)
                 if (matches2) {
                     result.new = {
                         time: performance.now() - start,
-                        file: newExtractLocation(matches2[4]),
-                        method: matches2[3] || '',
-                        line: Number.parseInt(matches2[5]),
-                        column: Number.parseInt(matches2[6]),
+                        file: newExtractLocation(matches2[6]),
+                        method: matches2[2] || '',
+                        line: Number.parseInt(matches2[7]),
+                        column: Number.parseInt(matches2[8]),
+                    }
+                }
+                else {
+                    if (mode === 'compare') {
+                        result.new = {
+                            time: performance.now() - start,
+                            file: 'LINE DOES NOT MATCH',
+                            method: '---',
+                            line: 0,
+                            column: 0,
+                        }
+                    }
+                    else {
+                        console.log(`No matching: ${performance.now() - start}\n`, line)
                     }
                 }
             }
-            acc.push(result)
+            result && acc.push(result)
             return acc
-        }, [] as Result)
+        }, [] as Result).filter(e => !!e.new || !!e.old)
     }
 
     parser.addEventListener('submit', (event) => {
@@ -171,15 +185,21 @@ document.addEventListener('DOMContentLoaded', () => {
     })
     parseOld.addEventListener('click', (event) => {
         event.preventDefault()
+        const now = performance.now()
         printResult(parse('old'))
+        console.info(`Old parser took ${performance.now() - now}ms`)
     })
     parseNew.addEventListener('click', (event) => {
         event.preventDefault()
+        const now = performance.now()
         printResult(parse('new'))
+        console.info(`New parser took ${performance.now() - now}ms`)
     })
     compare.addEventListener('click', (event) => {
         event.preventDefault()
+        const now = performance.now()
         printResult(parse('compare'))
+        console.info(`Compare took ${performance.now() - now}ms`)
     })
     clearResults.addEventListener('click', (event) => {
         event.preventDefault()
